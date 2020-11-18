@@ -24,7 +24,7 @@ public class ServerMain extends JFrame {
 			}
 		});
 	}
-
+ 
 	/**
 	 * Create the frame.
 	 */
