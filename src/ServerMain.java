@@ -43,7 +43,8 @@ public class ServerMain extends JFrame {
 	private Vector UserVec = new Vector(); // 연결된 사용자를 저장할 벡터
 	private static final int BUF_LEN = 128; // Windows 처럼 BUF_LEN 을 정의
 	private int[] RoomCnt = new int[5]; // 0은 방X 1부터 1번방 4번까지 4번방
-	private String[] RoomStatus = {"대기중", "대기중", "대기중", "대기중"};
+	private String[] RoomStatus = { "대기중", "대기중", "대기중", "대기중" };
+
 	/**
 	 * Launch the application.
 	 */
@@ -185,7 +186,7 @@ public class ServerMain extends JFrame {
 			String msg = "[" + UserName + "]님이 입장 하였습니다.\n";
 			WriteOthers(msg); // 아직 user_vc에 새로 입장한 user는 포함되지 않았다.
 
-			for (int i = 1; i <= 4; i++) {
+			for (int i = 1; i <= 2; i++) {
 				ChatMsg obcm = new ChatMsg(UserName, "602", i + " " + RoomCnt[i]);
 				WriteAllObject(obcm);
 			}
@@ -199,21 +200,44 @@ public class ServerMain extends JFrame {
 			AppendText("사용자 " + "[" + UserName + "] 퇴장. 현재 참가자 수 " + UserVec.size());
 		}
 
+		// 게임방 입장 602(게임방 데이터 전송)
 		public void RoomLogin(int RoomNumber) {
+			ChatMsg obcm;
+			if(RoomCnt[RoomNumber] == 4 || RoomStatus[RoomNumber].equals("게임중")) {
+				AppendText(UserName + " : " + RoomNumber + "번방 입장 실패.");
+				obcm = new ChatMsg("SERVER", "444", "게임이 진행 중이거나 인원 수가 가득 참.");
+			}
 			AppendText(UserName + " : " + RoomNumber + "번방 입장.");
 			RoomCnt[RoomNumber]++;
 			myRoomNumber = RoomNumber;
 
-			ChatMsg obcm = new ChatMsg(UserName, "602", RoomNumber + " " + RoomCnt[RoomNumber]);
+			obcm =  new ChatMsg("SERVER", "602", RoomNumber + " " + RoomCnt[RoomNumber]);
 			WriteAllObject(obcm);
 		}
 
+		// 게임방 퇴장 602
 		public void RoomLogout(int RoomNumber) {
 			RoomCnt[RoomNumber]--;
 			myRoomNumber = 0;
 			AppendText(UserName + " : " + RoomNumber + "번방 퇴장.");
 
-			ChatMsg obcm = new ChatMsg(UserName, "602", RoomNumber + " " + RoomCnt[RoomNumber]);
+			ChatMsg obcm = new ChatMsg("SERVER", "602", RoomNumber + " " + RoomCnt[RoomNumber]);
+			WriteAllObject(obcm);
+		}
+
+		// 게임 시작
+		public void RoomStart(int RoomNumber) {
+			RoomStatus[RoomNumber] = "게임중";
+
+			ChatMsg obcm = new ChatMsg("SERVER", "602", RoomNumber + " " + RoomStatus[RoomNumber]);
+			WriteAllObject(obcm);
+		}
+
+		// 게임 종료
+		public void RoomEnd(int RoomNumber) {
+			RoomStatus[RoomNumber] = "대기중";
+
+			ChatMsg obcm = new ChatMsg("SERVER", "602", RoomNumber + " " + RoomStatus[RoomNumber]);
 			WriteAllObject(obcm);
 		}
 
@@ -274,6 +298,15 @@ public class ServerMain extends JFrame {
 			WriteChatMsg(obcm);
 		}
 
+		//	게임방에만 전송
+		public void WriteRoom(String UserName, String protocol, String data, int RoomNumber) {
+			ChatMsg obcm = new ChatMsg(UserName, protocol, data);
+			for(int i = 0; i < user_vc.size(); i++) {
+				UserService user = (UserService) user_vc.elementAt(i);
+				if(user.myRoomNumber == RoomNumber)
+					user.WriteChatMsg(obcm);
+			}
+		}
 		//
 		public void WriteChatMsg(ChatMsg obj) {
 			try {
@@ -401,8 +434,14 @@ public class ServerMain extends JFrame {
 					RoomLogin(Integer.parseInt(cm.data));
 				} else if (cm.code.matches("601")) {
 					RoomLogout(Integer.parseInt(cm.data));
+				} else if (cm.code.matches("602")) {
+					String[] cmData = cm.data.split(" ");
+					if (cmData[1].matches(".*대기중")) {
+						RoomEnd(Integer.parseInt(cmData[0]));
+					} else if (cmData[1].matches(".*게임중")) {
+						RoomStart(Integer.parseInt(cmData[0]));
+					}
 				}
-
 			} // while
 		} // run
 	}
