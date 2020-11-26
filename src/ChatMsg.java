@@ -1,6 +1,6 @@
 // ChatMsg.java 채팅 메시지 ObjectStream 용.
 public class ChatMsg {
-    public String code; // 100:로그인, 400:로그아웃, 200:채팅메시지, 300:Image, 500: Mouse Event 600:RoomLogin 601:RoomLogout 602:RoomCnt
+    public String code; // 100:로그인, 400:로그아웃, 200:채팅메시지, 300:Image, 500: Mouse Event 600:RoomLogin 601:RoomLogout 602:RoomData
     public String UserName;
     public String data;
     public byte[] imgbytes;
